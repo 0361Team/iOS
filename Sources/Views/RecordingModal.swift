@@ -6,12 +6,11 @@
 //
 
 import SwiftUI
-    
-struct RecordingModal : View {
+
+struct RecordingModal: View {
     var onDismiss: () -> Void
-    @StateObject var recordingViewModel = RecordingViewModel()
+    @StateObject var recordingViewModel = AudioViewModel()
     @GestureState private var dragOffset = CGSize.zero
-    
 
     var body: some View {
         VStack {
@@ -27,15 +26,12 @@ struct RecordingModal : View {
                     Button("녹음 종료") {
                         recordingViewModel.stopRecording()
                         onDismiss()
-                        
-                        
                     }
                     .font(.headline)
                     .padding()
                     .foregroundColor(.gray)
                 }
             }
-
 
             Spacer()
             // 타임 레이블
@@ -53,14 +49,13 @@ struct RecordingModal : View {
                 } else {
                     recordingViewModel.startRecording()
                 }
-            }, label:{
+            }, label: {
                 Image(systemName: recordingViewModel.isRecording ?
                       (recordingViewModel.isPaused ? "play.circle.fill" : "pause.circle.fill") : "mic.circle.fill")
                     .font(.system(size: 50))
                     .foregroundStyle(.black)
                     .padding(.bottom, 40)
             })
-            
         }
         .frame(maxWidth: .infinity)
         .background(Color(.systemBackground))
@@ -84,7 +79,6 @@ struct RecordingModal : View {
         .animation(.easeOut, value: dragOffset)
     }
 }
-
 
 
 
