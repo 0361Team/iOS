@@ -1,4 +1,12 @@
+//
+//  AudioStream.swift
+//  Lecture2Quiz
+//
+//  Created by 바견규 on 4/27/25.
+//
+
 import AVFoundation
+
 
 class AudioStreamer {
     private let engine = AVAudioEngine()
@@ -6,8 +14,9 @@ class AudioStreamer {
     private var inputFormat: AVAudioFormat?
     private var isPaused: Bool = false
     private var audioWebSocket: AudioWebSocket?
-    private var converter: AVAudioConverter?
 
+    private var converter: AVAudioConverter?
+    
     // WhisperLive 설정에 맞춘 포맷
     private var bufferSize: AVAudioFrameCount = 4096
     private var sampleRate: Double = 16000
@@ -22,6 +31,7 @@ class AudioStreamer {
     func configureAudioSession() {
         let session = AVAudioSession.sharedInstance()
         do {
+            // 🎧 블루투스 장치 포함하여 오디오 재생 및 녹음 설정
             try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .defaultToSpeaker])
             try session.setActive(true)
 
@@ -37,17 +47,11 @@ class AudioStreamer {
             }
 
             // ✅ 실제 하드웨어 포맷 가져오기
-            let inputSampleRate = session.sampleRate
-            let inputChannels = UInt32(session.inputNumberOfChannels)
-            print("🎙️ 설정된 샘플레이트: \(inputSampleRate)")
-            print("🎙️ 설정된 채널 수: \(inputChannels)")
+            sampleRate = session.sampleRate
+            channels = UInt32(session.inputNumberOfChannels)
+            print("🎙️ 설정된 샘플레이트: \(sampleRate)")
+            print("🎙️ 설정된 채널 수: \(channels)")
 
-            // ✅ 샘플레이트를 16000으로 변환하도록 설정
-            let inputFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: inputSampleRate, channels: inputChannels, interleaved: false)!
-            let outputFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000, channels: inputChannels, interleaved: false)!
-            
-            converter = AVAudioConverter(from: inputFormat, to: outputFormat)
-            
         } catch {
             print("🔴 오디오 세션 설정 실패: \(error.localizedDescription)")
         }
@@ -57,13 +61,30 @@ class AudioStreamer {
     func startStreaming() {
         configureAudioSession()
         
-        let format = inputNode.outputFormat(forBus: 0)
-        self.inputFormat = format
+        // ✅ 하드웨어 포맷에 맞춰 Tap 포맷 설정
+        let inputFormat = inputNode.inputFormat(forBus: 0)
+        print("🔍 Input Format: \(inputFormat)")
 
+        guard let outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
+                                               sampleRate: 16000,
+                                               channels: 1,
+                                               interleaved: true) else {
+            print("⚠️ AVAudioFormat 생성 실패")
+            return
+        }
+
+        // ✅ Converter 생성
+        guard let audioConverter = AVAudioConverter(from: inputFormat, to: outputFormat) else {
+            print("🔴 Converter 초기화 실패")
+            return
+        }
         
-        self.inputFormat = format
-        
-        inputNode.installTap(onBus: 0, bufferSize: bufferSize, format: format) { [weak self] buffer, _ in
+        // 🔄 여기서 converter에 값을 할당해야 함
+        self.converter = audioConverter
+
+        print("✅ Converter 초기화 성공")
+
+        inputNode.installTap(onBus: 0, bufferSize: bufferSize, format: inputFormat) { [weak self] buffer, _ in
             self?.processAudioBuffer(buffer)
         }
 
@@ -74,6 +95,8 @@ class AudioStreamer {
             print("🔴 AVAudioEngine 시작 실패: \(error.localizedDescription)")
         }
     }
+
+
 
     // MARK: - 오디오 버퍼를 WebSocket으로 서버로 전송
     func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
@@ -94,9 +117,12 @@ class AudioStreamer {
             return
         }
 
-        if let audioData = convertBufferTo16BitPCM(outputBuffer) {
-            print("🔄 PCM 데이터 전송 중...")
-            audioWebSocket?.sendDataToServer(audioData)
+        // 먼저 16비트 PCM으로 변환 후 Float32로 다시 변환
+        if let pcmData = convertBufferTo16BitPCM(outputBuffer) {
+            // Float32로 변환하여 서버에 전송
+            let floatData = convertPCMToFloat32(pcmData)
+            print("🔄 Float32 데이터 전송 중...")
+            audioWebSocket?.sendDataToServer(floatData)
         } else {
             print("Error: Audio buffer 변환 실패")
         }
@@ -104,22 +130,32 @@ class AudioStreamer {
 
     // MARK: - 32bit float PCM -> 16bit int PCM 변환
     func convertBufferTo16BitPCM(_ buffer: AVAudioPCMBuffer) -> Data? {
-        guard let floatChannelData = buffer.floatChannelData else {
-            print("floatChannelData is nil")
+        guard let channelData = buffer.int16ChannelData else {
+            print("int16ChannelData is nil")
             return nil
         }
-
-        let channelPointer = floatChannelData.pointee
-        let frameLength = Int(buffer.frameLength)
-        var pcmData = Data(capacity: frameLength * MemoryLayout<Int16>.size)
-
-        for i in 0..<frameLength {
-            let sample = max(-1.0, min(1.0, channelPointer[i])) // 클리핑 처리
-            var intSample = Int16(sample * Float(Int16.max))
-            pcmData.append(Data(bytes: &intSample, count: MemoryLayout<Int16>.size))
+        let channelPointer = channelData.pointee
+        let dataLength = Int(buffer.frameLength) * MemoryLayout<Int16>.size
+        return Data(bytes: channelPointer, count: dataLength)
+    }
+    
+    // MARK: - 16bit int PCM -> Float32 변환 (새로 추가)
+    func convertPCMToFloat32(_ pcmData: Data) -> Data {
+        // 16비트 PCM 데이터를 float32로 변환
+        var floatArray = [Float32](repeating: 0, count: pcmData.count / 2)
+        
+        pcmData.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) -> Void in
+            if let baseAddress = bytes.baseAddress {
+                let int16Buffer = baseAddress.bindMemory(to: Int16.self, capacity: pcmData.count / 2)
+                for i in 0..<pcmData.count / 2 {
+                    // -1.0에서 1.0 사이로 정규화 (Python 코드와 동일한 처리)
+                    floatArray[i] = Float32(int16Buffer[i]) / 32768.0
+                }
+            }
         }
-
-        return pcmData
+        
+        // Float32 배열을 Data로 변환
+        return Data(bytes: floatArray, count: floatArray.count * MemoryLayout<Float32>.size)
     }
 
     // MARK: - 오디오 스트리밍 일시 정지
@@ -149,5 +185,6 @@ class AudioStreamer {
         engine.stop()
         print("🛑 AVAudioEngine 중지됨")
     }
+    
+    
 }
-
