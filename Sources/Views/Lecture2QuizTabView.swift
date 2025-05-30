@@ -19,7 +19,7 @@ struct TableView: View {
                 FolderListView()
                     .tag("Class")
 
-                QuizDeckView()
+                QuizMainView()
                     .tag("Quiz")
 
                 Text("OtherView")
@@ -35,7 +35,8 @@ struct TableView: View {
             }
             .padding()
             .background(Color.white)
-        }
+        }.navigationBarBackButtonHidden(true)
+        .interactiveDismissDisabled(true) 
     }
 
     @ViewBuilder
@@ -58,5 +59,7 @@ struct TableView: View {
 }
 
 #Preview {
-    
+    NavigationStack {
+        TableView()
+    }
 }

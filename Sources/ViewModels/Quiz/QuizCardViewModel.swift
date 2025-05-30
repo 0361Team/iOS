@@ -7,19 +7,18 @@
 
 import Foundation
 
-class QuizViewModel: ObservableObject {
+class QuizCardViewModel: ObservableObject {
     @Published var cards: [QuizCard] = []
     @Published var currentIndex: Int = 0
     @Published var correct: [UUID] = []
     @Published var wrong: [UUID] = []
+    var quizViewModel: QuizViewModel?
+    
+    var onAllAnswered: (() -> Void)?
+    var onAnswer: ((Int, Bool) -> Void)?
 
-    init() {
-        // 예시 카드
-        cards = [
-            QuizCard(question: "Swift의 UI 프레임워크는?", answer: "SwiftUI"),
-            QuizCard(question: "애플의 OS는?", answer: "iOS"),
-            QuizCard(question: "iPhone은 어느 회사 제품?", answer: "Apple")
-        ]
+    init(cards: [QuizCard] = []) {
+        self.cards = cards
     }
 
     var currentCard: QuizCard? {
@@ -29,12 +28,20 @@ class QuizViewModel: ObservableObject {
 
     func swipeCard(isCorrect: Bool) {
         guard let currentCard = currentCard else { return }
+
         if isCorrect {
             correct.append(currentCard.id)
         } else {
             wrong.append(currentCard.id)
         }
+
+        onAnswer?(currentIndex, isCorrect)
         currentIndex += 1
+        
+        if currentIndex >= cards.count {
+                    // ✅ 마지막 카드 넘긴 후에만 호출됨
+                    onAllAnswered?()
+        }
     }
 
     func restart() {
@@ -43,4 +50,5 @@ class QuizViewModel: ObservableObject {
         wrong = []
     }
 }
+
 

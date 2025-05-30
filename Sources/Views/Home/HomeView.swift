@@ -94,11 +94,13 @@
                                     }
                                 }
 
-                            RecordingModal {
-                                withAnimation {
-                                    showRecordingModal = false
+                            RecordingModal(
+                                onDismiss: {
+                                    withAnimation {
+                                        showRecordingModal = false
+                                    }
                                 }
-                            }
+                            )
                             .zIndex(1)
                         }
 
