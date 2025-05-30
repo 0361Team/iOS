@@ -13,6 +13,8 @@ class AudioStreamer {
     private var isPaused: Bool = false
     private var audioWebSocket: AudioWebSocket?
     private var partialBuffer = Data() // 🔄 남은 청크 보관
+    private var isStreaming: Bool = false
+
 
     // WhisperLive 설정에 맞춘 포맷
     private var bufferSize: AVAudioFrameCount = 1600  // 100ms 기준
@@ -35,7 +37,6 @@ class AudioStreamer {
                                          sampleRate: 16000,
                                          channels: 1,
                                          interleaved: true)!
-        
         // 🔄 오디오 변환기 생성
         self.converter = AVAudioConverter(from: inputFormat, to: outputFormat)
         self.inputFormat = outputFormat
@@ -48,7 +49,7 @@ class AudioStreamer {
             try session.setCategory(.playAndRecord, mode: .default, options: [.allowBluetooth, .defaultToSpeaker])
             try session.setPreferredSampleRate(48000)
             try session.setPreferredInputNumberOfChannels(1) // Mono로 강제 설정
-            try session.setMode(.measurement)
+            try session.setMode(.videoChat)
             try session.setActive(true, options: .notifyOthersOnDeactivation)
             sampleRate = session.sampleRate
             channels = UInt32(session.inputNumberOfChannels)
@@ -61,6 +62,11 @@ class AudioStreamer {
 
     // MARK: - 오디오 스트리밍 시작
     func startStreaming() {
+        guard !isStreaming else {
+            print("⚠️ 이미 스트리밍 중입니다.")
+            return
+        }
+        
         configureAudioSession()
         
         let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,
@@ -81,11 +87,13 @@ class AudioStreamer {
 
         do {
             try engine.start()
+            isStreaming = true // ✅ 스트리밍 상태 활성화
             print("🎙️ AVAudioEngine 시작됨")
         } catch {
             print("🔴 AVAudioEngine 시작 실패: \(error.localizedDescription)")
         }
     }
+
 
     // MARK: - 오디오 버퍼를 WebSocket으로 전송
     func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
@@ -104,7 +112,7 @@ class AudioStreamer {
             print("🔊 오디오 RMS 값: \(rms)")
             
             // 🔍 너무 작으면 경고 로그 출력
-            if rms < 0.01 {
+            if rms < 0.001 {
                 print("⚠️ 볼륨이 너무 작습니다.")
             }
         }
@@ -154,30 +162,45 @@ class AudioStreamer {
     // MARK: - Python의 bytes_to_float_array 메소드와 유사하게 변환
     func convertToFloat32BytesLikePython(_ buffer: AVAudioPCMBuffer) -> Data? {
         guard let int16ChannelData = buffer.int16ChannelData else {
-            print("int16ChannelData is nil")
+            print("❌ int16ChannelData is nil")
             return nil
         }
 
         let frameLength = Int(buffer.frameLength)
         let channelPointer = int16ChannelData.pointee
-        
-        // Float32 배열 생성
+
+        // Int16 → Float32 변환
         var floatArray = [Float32](repeating: 0, count: frameLength)
-        
-        // Int16 -> Float32 정규화 (Python과 동일한 방식)
         for i in 0..<frameLength {
             let int16Value = channelPointer[i]
-            // Python의 정규화 방식: value.astype(np.float32) / 32768.0
             floatArray[i] = Float32(Int16(littleEndian: int16Value)) / 32768.0
-
         }
-        
-        // Float32 배열을 바이트로 변환 (Python의 tobytes()와 동일)
+
+        // ✅ RMS 계산
+        let rms = sqrt(floatArray.map { $0 * $0 }.reduce(0, +) / Float(frameLength))
+        let targetRMS: Float32 = 0.1
+        let gain = targetRMS / max(rms, 0.0001)
+
+        print("🎛️ RMS: \(rms), 적용 gain: \(gain)")
+
+        // ✅ RMS 정규화 + 클리핑
+        for i in 0..<frameLength {
+            let scaled = floatArray[i] * gain
+            floatArray[i] = min(max(scaled, -1.0), 1.0)
+        }
+
+        // Float32 배열 → Data 변환
         let floatData = Data(bytes: floatArray, count: frameLength * MemoryLayout<Float32>.size)
-        
+
+        // 범위 로그 확인
+        if let minVal = floatArray.min(), let maxVal = floatArray.max() {
+            print("🎚️ 정규화 후 Float32 값 범위: \(minVal)...\(maxVal)")
+        }
+
         print("🔄 Python 스타일로 Float32로 변환 완료 - \(floatData.count) bytes")
         return floatData
     }
+
 
     // MARK: - 오디오 스트리밍 일시 정지
     func pauseStreaming() {
@@ -204,8 +227,17 @@ class AudioStreamer {
 
     // MARK: - 오디오 스트리밍 중지
     func stopStreaming() {
+        guard isStreaming else {
+            print("⚠️ 이미 중지된 상태입니다.")
+            return
+        }
+
         inputNode.removeTap(onBus: 0)
         engine.stop()
         print("🛑 AVAudioEngine 중지됨")
+
+        // ❌ WebSocket 종료 제거 (ViewModel에서 수행)
+        isStreaming = false
     }
+
 }
