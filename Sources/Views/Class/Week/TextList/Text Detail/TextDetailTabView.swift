@@ -53,7 +53,7 @@ struct TextDetailTabView: View {
 
             if isSelected {
                 Capsule()
-                    .fill(Color.green)
+                    .fill(Color.blue)
                     .frame(height: 3)
                     .matchedGeometryEffect(id: "underline", in: animation)
             } else {

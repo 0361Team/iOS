@@ -43,10 +43,12 @@ struct QuizView: View {
                         
                         HStack {
                             // 정보 보기
-                            Button("정보 보기") {
-                                viewModel.fetchQuizDetail(id: quiz.id, useForSheet: true) { }
-                            }
-                            
+                            Button(action:{viewModel.fetchQuizDetail(id: quiz.id, useForSheet: true){}}, label: {
+                                Text("정보 보기")
+                                    .font(Font.Pretend.pretendardMedium(size: 14))
+                                
+                            })
+                    
                             Spacer()
                             
                             // 퀴즈 풀기
@@ -61,6 +63,7 @@ struct QuizView: View {
                                     }
                                 }
                             }
+                            .font(Font.Pretend.pretendardMedium(size: 16))
                             .buttonStyle(.borderedProminent)
                         }
                     }

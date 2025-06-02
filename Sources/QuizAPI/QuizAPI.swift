@@ -125,10 +125,16 @@ extension QuizAPI: TargetType {
         }
     }
 
-    var headers: [String : String]? {
-        return [
-            "accept": "*/*",
-            "content-type": "application/json"
+    var headers: [String: String]? {
+        var headers: [String: String] = [
+            "Content-Type": "application/json",
+            "Accept": "*/*"
         ]
+
+        if let token = KeychainHelper.shared.readAccessToken() {
+            headers["Authorization"] = "Bearer \(token)"
+        }
+        
+        return headers
     }
 }

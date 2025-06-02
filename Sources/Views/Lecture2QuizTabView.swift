@@ -22,7 +22,7 @@ struct TableView: View {
                 QuizMainView()
                     .tag("Quiz")
 
-                Text("OtherView")
+                OtherView()
                     .tag("Other")
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -47,11 +47,11 @@ struct TableView: View {
             VStack(spacing: 4) {
                 Image(systemName: selectedTab == title ? selectedImage : defaultImage)
                     .frame(width: 24, height: 24)
-                    .foregroundColor(selectedTab == title ? Color.green : .gray)
+                    .foregroundColor(selectedTab == title ? Color.blue : .gray)
                 
                 Text(title)
                     .font(.caption)
-                    .foregroundColor(selectedTab == title ? Color.green : .gray)
+                    .foregroundColor(selectedTab == title ? Color.blue : .gray)
             }
             .frame(maxWidth: .infinity)
         }

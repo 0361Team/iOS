@@ -147,9 +147,21 @@ extension CourseAPI: TargetType {
     }
 
     var headers: [String: String]? {
-        return [
-            "accept": "*/*",
-            "content-type": "application/json"
+        var headers: [String: String] = [
+            "Content-Type": "application/json",
+            "Accept": "*/*"
         ]
+        if let token = KeychainHelper.shared.readAccessToken() {
+            print("✅ 토큰 있음: \(token)")
+            headers["Authorization"] = "Bearer \(token)"
+        } else {
+            print("❌ 토큰 없음")
+        }
+
+        if let token = KeychainHelper.shared.readAccessToken() {
+            headers["Authorization"] = "Bearer \(token)"
+        }
+        
+        return headers
     }
 }

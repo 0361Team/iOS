@@ -29,7 +29,6 @@ struct QuizSessionDetailSheet: View {
                     .padding(.vertical, 6)
                 }
             }
-            .navigationTitle("기록 상세")
         }
     }
 }
