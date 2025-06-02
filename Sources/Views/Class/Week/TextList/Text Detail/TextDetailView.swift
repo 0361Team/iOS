@@ -7,6 +7,7 @@
 
 
 import SwiftUI
+import MarkdownUI
 
 struct TextDetailView: View {
     @Namespace private var animation
@@ -29,12 +30,15 @@ struct TextDetailView: View {
                     ScrollView {
                         Text(viewModel.text)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            .font(Font.Pretend.pretendardMedium(size: 17))
                     }
                 case .sumary:
                     if let summary = viewModel.sumary {
                         ScrollView {
-                            Text(summary)
+                            Markdown(viewModel.sumary ?? "")
+                                .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                .font(Font.Pretend.pretendardMedium(size: 17))
                         }
                     } else {
                         ProgressView("요약 불러오는 중...")
@@ -46,9 +50,17 @@ struct TextDetailView: View {
                             Text("키워드 없음")
                         } else {
                             VStack(alignment: .leading, spacing: 8) {
-                                ForEach(keywords, id: \.self) { keyword in
-                                    Text("• \(keyword)")
+                                // 줄 바꿈 없는 경우
+                                FlowLayout(data: keywords, spacing: 8) { keyword in
+                                    Text(keyword)
+                                        .font(Font.Pretend.pretendardMedium(size: 18))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.blue.opacity(0.1))
+                                        .foregroundColor(.blue)
+                                        .clipShape(Capsule())
                                 }
+
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }

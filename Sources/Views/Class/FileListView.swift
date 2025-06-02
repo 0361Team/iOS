@@ -85,9 +85,9 @@ struct defaultFolder: View {
         HStack {
             Image(systemName: "tray.2")
                 .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.blue)
             Text("기본 폴더")
                 .font(.system(size: 18, weight: .semibold))
-            Spacer()
             Button(action: onAddFolder) {
                 Image(systemName: "plus")
                     .foregroundColor(.gray)
@@ -109,9 +109,9 @@ struct Folder: View {
     var body: some View {
         HStack {
             Image(systemName: "folder")
-                .foregroundColor(.black)
+                .foregroundColor(Color(hex: "#95a8ed"))
             Text(folderName)
-                .foregroundColor(.black)
+                .foregroundColor(Color(hex: "#2b2b2b"))
         }
         .font(.system(size: 18, weight: .semibold))
         .padding(.vertical, 2)

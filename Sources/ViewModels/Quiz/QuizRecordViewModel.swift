@@ -19,7 +19,7 @@ class QuizRecordViewModel: ObservableObject {
     private let userId = 1
 
     // 전체 세션 조회
-    func fetchQuizSessions() {
+    func fetchQuizSessions(completion: (() -> Void)? = nil) {
         quizProvider.request(.getUserQuizSessions(userId: userId)) { [weak self] result in
             switch result {
             case .success(let response):
@@ -31,6 +31,7 @@ class QuizRecordViewModel: ObservableObject {
             case .failure(let error):
                 print("❌ 세션 목록 조회 실패: \(error)")
             }
+            completion?()  // ✅ 콜백 호출
         }
     }
 

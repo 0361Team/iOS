@@ -11,52 +11,68 @@ struct QuizRecordView: View {
     @StateObject private var viewModel = QuizRecordViewModel()
     @State private var showQuizDeck = false
     @State private var cardVM = QuizCardViewModel()
+    @State private var isLoading = true  // ✅ 로딩 상태
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(viewModel.sessions) { session in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(session.quizTitle)
-                            .font(.headline)
-                        HStack {
-                        Text("시작 시간: \(session.startedAt ?? "시간 정보 없음")")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            
-                            Spacer()
-                        
-                            if session.completed {
-                                Button("기록 보기") {
-                                    viewModel.fetchSessionDetail(sessionId: session.id)
+            Group {
+                if isLoading {
+                    VStack {
+                        Spacer()
+                        ProgressView("세션을 불러오는 중입니다...")
+                            .progressViewStyle(CircularProgressViewStyle())
+                        Spacer()
+                    }
+                } else {
+                    List {
+                        ForEach(viewModel.sessions) { session in
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(session.quizTitle)
+                                    .font(.headline)
+                                HStack {
+                                    Text("시작 시간: \(session.startedAt ?? "시간 정보 없음")")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                    
+                                    Spacer()
+                                    
+                                    if session.completed {
+                                        Button("기록 보기") {
+                                            viewModel.fetchSessionDetail(sessionId: session.id)
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .tint(.black)
+                                        .foregroundColor(.white)
+                                        
+                                    } else {
+                                        Button("이어서 풀기") {
+                                            handleResumeSession(for: session)
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .tint(.blue)
+                                        .foregroundColor(.white)
+                                    }
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.black)
-                                .foregroundColor(.white)
-                                
-                            } else {
-                                Button("이어서 풀기") {
-                                    handleResumeSession(for: session)
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .tint(.orange)
-                                .foregroundColor(.white)
                             }
+                            .padding(.vertical, 6)
                         }
                     }
-                    .padding(.vertical, 6)
                 }
             }
-            .navigationTitle("퀴즈 기록")
             .onAppear {
-                viewModel.fetchQuizSessions()
+                viewModel.fetchQuizSessions {
+                    isLoading = false
+                }
             }
             .sheet(item: $viewModel.selectedSessionDetail) { detail in
                 QuizSessionDetailSheet(detail: detail)
             }
             .fullScreenCover(isPresented: $showQuizDeck, onDismiss: {
                 DispatchQueue.main.async {
-                    viewModel.fetchQuizSessions()
+                    isLoading = true
+                    viewModel.fetchQuizSessions {
+                        isLoading = false
+                    }
                 }
             }) {
                 QuizDeckView(viewModel: cardVM, isPresented: $showQuizDeck)
