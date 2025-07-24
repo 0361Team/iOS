@@ -2,7 +2,7 @@
 
 <img width="1536" height="1024" alt="image (2)" src="https://github.com/user-attachments/assets/71451b82-e8b3-4a8f-a31d-7aff9b594709" />
 
-시뮬레이션
+## 시뮬레이션
 https://rectangular-octave-347.notion.site/iOS-Lecture2Quiz-2025-03-202f6f40b4248043ba0edcfee41460c2
 
 ### 🔍 프로젝트 개요
@@ -11,7 +11,8 @@ https://rectangular-octave-347.notion.site/iOS-Lecture2Quiz-2025-03-202f6f40b424
 
 STT 처리가 된 텍스트는 벡터 데이터베이스를 통해 “외부 지식 검색” + “문맥 확장” 처리를 하여 RAG 시스템 아키텍처를 통해 컨텍스트 최적화를 진행하여 Claude API를 통해 퀴즈를 생성합니다.
 
-![KakaoTalk_Photo_2025-05-30-00-55-51-1.png](attachment:6ba41c34-346a-46f6-ac00-f72a383586e2:KakaoTalk_Photo_2025-05-30-00-55-51-1.png)
+
+<img width="935" height="706" alt="KakaoTalk_Photo_2025-05-30-00-55-51-1 (1)" src="https://github.com/user-attachments/assets/45dad708-1f87-4966-b0f1-df471b007885" />
 
 ---
 
